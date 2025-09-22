@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أوراق عمل لمسائل الطرح</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+
+        @media print {
+            body {
+                background-color: #ffffff;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .problem-grid {
+                page-break-after: always;
+                margin-top: 0;
+            }
+            .problem-container {
+                border-color: #e5e7eb;
+            }
+            .answer-input, .answer-input:disabled {
+                border: 1px solid #d1d5db !important;
+                background-color: #f9fafb !important;
+            }
+        }
+
+        .problem-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: #fff;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s ease-in-out;
+            position: relative;
+        }
+        .problem-container:hover {
+            transform: scale(1.02);
+        }
+        
+        .number-line {
+            display: flex;
+            justify-content: flex-end;
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+
+        .separator-line {
+            width: 80%;
+            height: 2px;
+            background-color: #374151;
+            margin-top: 0.25rem;
+        }
+
+        .result-line {
+            margin-top: 0.25rem;
+            font-size: 1.25rem;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .answer-input {
+            width: 80%;
+            text-align: right;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            font-size: 1.25rem;
+            font-weight: 500;
+            direction: ltr;
+        }
+        .answer-input.correct {
+            border-color: #10b981;
+            background-color: #d1fae5;
+        }
+        .answer-input.incorrect {
+            border-color: #ef4444;
+            background-color: #fee2e2;
+        }
+
+        .correct-answer-display {
+            position: absolute;
+            top: 1.5rem;
+            left: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #10b981;
+            background-color: #d1fae5;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .show-answer-overlay {
+            opacity: 1;
+        }
+
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            z-index: 1000;
+            display: none;
+            text-align: center;
+        }
+        .backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-indigo-700">أوراق عمل لمسائل الطرح</h1>
+            <p class="mt-2 text-lg text-gray-600">تدرب على مسائل الطرح السهلة بدون استلاف</p>
+        </header>
+
+        <div class="no-print flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4 mb-8">
+            <button id="generateBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-300 transform hover:scale-105">
+                توليد مسائل جديدة
+            </button>
+            <button id="checkAnswersBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-300 transform hover:scale-105">
+                ✅ تحقق من الإجابات
+            </button>
+            <button id="showAnswersBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-300 transform hover:scale-105">
+                👀 عرض الحلول
+            </button>
+            <button id="teacherTipBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-300 transform hover:scale-105">
+                ✨ نصيحة المعلم
+            </button>
+            <button id="readAloudBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-300 transform hover:scale-105">
+                ✨ قراءة المسائل
+            </button>
+            <button onclick="window.print();" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-300 transform hover:scale-105">
+                طباعة
+            </button>
+        </div>
+
+        <div id="teacherTipContainer" class="no-print bg-white p-6 rounded-lg shadow-md mb-8 hidden">
+            <h2 class="text-2xl font-bold mb-2 text-indigo-700">نصيحة تعليمية</h2>
+            <div id="teacherTipText" class="text-gray-700 leading-relaxed"></div>
+            <div id="teacherTipLoading" class="hidden loading-spinner mx-auto mt-4"></div>
+        </div>
+
+        <div id="problems-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 problem-grid">
+            <!-- Problems will be injected here by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Custom message box -->
+    <div id="messageBox" class="message-box">
+        <h3 id="messageTitle" class="text-xl font-bold mb-2"></h3>
+        <p id="messageText" class="text-gray-700 mb-4"></p>
+        <button id="messageOkBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">حسنًا</button>
+    </div>
+    <div id="backdrop" class="backdrop"></div>
+
+    <script>
+        const problemsContainer = document.getElementById('problems-container');
+        const generateBtn = document.getElementById('generateBtn');
+        const checkAnswersBtn = document.getElementById('checkAnswersBtn');
+        const showAnswersBtn = document.getElementById('showAnswersBtn');
+        const teacherTipBtn = document.getElementById('teacherTipBtn');
+        const teacherTipContainer = document.getElementById('teacherTipContainer');
+        const teacherTipText = document.getElementById('teacherTipText');
+        const teacherTipLoading = document.getElementById('teacherTipLoading');
+        const readAloudBtn = document.getElementById('readAloudBtn');
+
+        const messageBox = document.getElementById('messageBox');
+        const backdrop = document.getElementById('backdrop');
+        const messageTitle = document.getElementById('messageTitle');
+        const messageText = document.getElementById('messageText');
+        const messageOkBtn = document.getElementById('messageOkBtn');
+
+        // Note: Removed the Service Worker registration code as it was causing a protocol error.
+
+        const apiKey = ""; // Gemini API key is automatically provided
+        const textModelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        const ttsModelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+        // Function to show a custom message box instead of alert()
+        const showMessage = (title, text) => {
+            messageTitle.textContent = title;
+            messageText.textContent = text;
+            messageBox.style.display = 'block';
+            backdrop.style.display = 'block';
+        };
+
+        messageOkBtn.addEventListener('click', () => {
+            messageBox.style.display = 'none';
+            backdrop.style.display = 'none';
+        });
+
+        // Function to generate a random number within a range
+        const getRandomInt = (min, max) => {
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        };
+
+        // Function to generate a single "no-borrowing" subtraction problem
+        const generateSubtractionProblem = (minuendDigits) => {
+            let minuend, subtrahend;
+            if (minuendDigits === 2) {
+                // Generate a 2-digit number minus a 2-digit number
+                let tens1 = getRandomInt(1, 9);
+                let units1 = getRandomInt(1, 9);
+                let tens2 = getRandomInt(1, tens1);
+                let units2 = getRandomInt(1, units1);
+
+                minuend = tens1 * 10 + units1;
+                subtrahend = tens2 * 10 + units2;
+            } else if (minuendDigits === 3) {
+                // Generate a 3-digit number minus a 2-digit number
+                let hundreds1 = getRandomInt(1, 9);
+                let tens1 = getRandomInt(1, 9);
+                let units1 = getRandomInt(1, 9);
+                
+                let tens2 = getRandomInt(1, tens1);
+                let units2 = getRandomInt(1, units1);
+
+                minuend = hundreds1 * 100 + tens1 * 10 + units1;
+                subtrahend = tens2 * 10 + units2;
+            }
+            return { num1: minuend, num2: subtrahend, operator: '-' };
+        };
+
+        // Function to render a problem on the page
+        const renderProblem = (problem) => {
+            const { num1, num2, operator } = problem;
+            const answer = num1 - num2;
+            
+            const problemDiv = document.createElement('div');
+            problemDiv.className = 'problem-container text-right flex flex-col items-end border border-gray-200 p-4 rounded-lg shadow-sm';
+            problemDiv.dataset.answer = answer;
+            
+            const formattedNum1 = num1.toString();
+            const formattedNum2 = num2.toString();
+            
+            problemDiv.innerHTML = `
+                <div class="number-line rtl">${formattedNum1}</div>
+                <div class="number-line flex items-center rtl">
+                    <span class="mr-2 text-red-500 text-2xl font-bold">${operator}</span>
+                    <span>${formattedNum2}</span>
+                </div>
+                <div class="separator-line bg-gray-400 my-2"></div>
+                <div class="result-line w-full flex justify-end">
+                    <input type="number" class="answer-input text-center" placeholder="الجواب">
+                </div>
+                <div class="correct-answer-display"></div>
+            `;
+            problemsContainer.appendChild(problemDiv);
+        };
+
+        // Main function to generate and display all problems
+        const generateAllProblems = () => {
+            problemsContainer.innerHTML = '';
+            const problems = [];
+
+            // Generate 50 two-digit problems
+            for (let i = 0; i < 50; i++) {
+                problems.push(generateSubtractionProblem(2));
+            }
+
+            // Generate 50 three-digit problems
+            for (let i = 0; i < 50; i++) {
+                problems.push(generateSubtractionProblem(3));
+            }
+            
+            // Shuffle the problems to mix them up
+            problems.sort(() => Math.random() - 0.5);
+
+            // Store problems in a global variable for other functions
+            window.currentProblems = problems;
+
+            // Render all problems
+            problems.forEach(p => renderProblem(p));
+        };
+
+        // Function to check all answers
+        const checkAnswers = () => {
+            const problemElements = problemsContainer.querySelectorAll('.problem-container');
+            let correctCount = 0;
+            let totalCount = problemElements.length;
+
+            problemElements.forEach(problemEl => {
+                const input = problemEl.querySelector('.answer-input');
+                const correctAnswer = parseInt(problemEl.dataset.answer, 10);
+                const userAnswer = parseInt(input.value, 10);
+
+                // Reset classes
+                input.classList.remove('correct', 'incorrect');
+                input.disabled = true;
+                
+                if (userAnswer === correctAnswer) {
+                    input.classList.add('correct');
+                    correctCount++;
+                } else {
+                    input.classList.add('incorrect');
+                }
+            });
+
+            showMessage('نتائجك', `لقد أجبت على ${correctCount} من ${totalCount} سؤال بشكل صحيح!`);
+        };
+
+        // Function to show correct answers
+        const showAnswers = () => {
+            const problemElements = problemsContainer.querySelectorAll('.problem-container');
+            problemElements.forEach(problemEl => {
+                const input = problemEl.querySelector('.answer-input');
+                const correctAnswerDisplay = problemEl.querySelector('.correct-answer-display');
+                const correctAnswer = parseInt(problemEl.dataset.answer, 10);
+
+                input.value = correctAnswer;
+                input.disabled = true;
+                input.classList.remove('correct', 'incorrect');
+
+                // To ensure the correct-answer-display is not visible when `checkAnswers` is clicked.
+                correctAnswerDisplay.textContent = correctAnswer;
+                correctAnswerDisplay.classList.add('show-answer-overlay');
+            });
+        };
+
+        // Function to fetch a teacher's tip from Gemini API
+        const fetchTeacherTip = async () => {
+            // Display loading indicator and container
+            teacherTipContainer.style.display = 'block';
+            teacherTipText.style.display = 'none';
+            teacherTipLoading.style.display = 'block';
+            teacherTipBtn.disabled = true;
+
+            try {
+                // Get a few random problems to give context to the tip
+                const problems = window.currentProblems || [];
+                const sampleProblems = problems.slice(0, 3).map(p => `${p.num1} - ${p.num2}`).join(', ');
+
+                const prompt = `Generate a brief, friendly, and practical tip for a parent or a teacher on how to explain subtraction to a child, using simple and clear language. The tip should be in Arabic. The problems are similar to these: ${sampleProblems}.`;
+                
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    systemInstruction: { parts: [{ text: "Act as an expert in early childhood education and math." }] },
+                };
+
+                const response = await fetch(textModelUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const tip = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (tip) {
+                    teacherTipText.innerHTML = tip.replace(/\n/g, '<br>');
+                } else {
+                    teacherTipText.innerHTML = 'حدث خطأ. لا يمكن توليد النصيحة في الوقت الحالي.';
+                }
+            } catch (error) {
+                console.error('Error fetching teacher tip:', error);
+                teacherTipText.innerHTML = 'حدث خطأ. لا يمكن توليد النصيحة في الوقت الحالي.';
+            } finally {
+                // Hide loading indicator and enable button
+                teacherTipLoading.style.display = 'none';
+                teacherTipText.style.display = 'block';
+                teacherTipBtn.disabled = false;
+            }
+        };
+
+        // Function to convert PCM audio data to WAV format
+        const pcmToWav = (pcmData, sampleRate) => {
+            const numChannels = 1;
+            const bytesPerSample = 2;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+
+            const buffer = new ArrayBuffer(44 + pcmData.length * bytesPerSample);
+            const view = new DataView(buffer);
+
+            // RIFF chunk descriptor
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + pcmData.length * bytesPerSample, true);
+            writeString(view, 8, 'WAVE');
+            // FMT sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bytesPerSample * 8, true);
+            // DATA sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, pcmData.length * bytesPerSample, true);
+            
+            // PCM data
+            for (let i = 0; i < pcmData.length; i++) {
+                view.setInt16(44 + i * bytesPerSample, pcmData[i], true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        };
+
+        const writeString = (view, offset, string) => {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        };
+
+        const base64ToArrayBuffer = (base64) => {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        };
+
+        // Function to read all problems aloud using Gemini TTS API
+        const readNumbersAloud = async () => {
+            if (!window.currentProblems || window.currentProblems.length === 0) {
+                showMessage('تنبيه', 'الرجاء توليد المسائل أولاً.');
+                return;
+            }
+            readAloudBtn.disabled = true;
+            readAloudBtn.innerHTML = 'جارٍ القراءة...';
+            
+            try {
+                // Construct a full sentence to read aloud
+                const problemsText = window.currentProblems.slice(0, 10).map(p => `${p.num1} ناقص ${p.num2}.`).join(' ');
+                
+                const prompt = `اقرأ المسائل الرياضية التالية بصوت واضح وهادئ: ${problemsText}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: {
+                                prebuiltVoiceConfig: { voiceName: "Rasalgethi" }
+                            }
+                        }
+                    }
+                };
+                
+                const response = await fetch(ttsModelUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    if (sampleRateMatch) {
+                        const sampleRate = parseInt(sampleRateMatch[1], 10);
+                        const pcmData = base64ToArrayBuffer(audioData);
+                        const pcm16 = new Int16Array(pcmData);
+                        const wavBlob = pcmToWav(pcm16, sampleRate);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                    } else {
+                        throw new Error('Could not parse sample rate from MIME type.');
+                    }
+                } else {
+                    throw new Error('Invalid audio data received.');
+                }
+
+            } catch (error) {
+                console.error('Error with TTS:', error);
+                showMessage('خطأ', 'حدث خطأ في قراءة المسائل. يرجى المحاولة مرة أخرى.');
+            } finally {
+                readAloudBtn.disabled = false;
+                readAloudBtn.innerHTML = '✨ قراءة المسائل';
+            }
+        };
+
+        // Initial generation on page load
+        window.onload = generateAllProblems;
+
+        // Add event listeners
+        generateBtn.addEventListener('click', generateAllProblems);
+        checkAnswersBtn.addEventListener('click', checkAnswers);
+        showAnswersBtn.addEventListener('click', showAnswers);
+        teacherTipBtn.addEventListener('click', fetchTeacherTip);
+        readAloudBtn.addEventListener('click', readNumbersAloud);
+    </script>
+</body>
+</html>
